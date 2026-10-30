@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pay for services</title>
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="brand" id="brand">Payments</div>
+    <button class="link" id="findBtn" type="button">Find my invoice</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="intro">
+    <h1><span class="num">07</span> Items and funding required</h1>
+    <p class="muted" id="rate">Select the services you are paying for, then choose Flutterwave or Paystack.</p>
+  </section>
+
+  <div class="layout">
+    <section>
+      <div class="list-head">
+        <label class="check"><input type="checkbox" id="all" checked> <span>Select all</span></label>
+        <span class="muted" id="count"></span>
+      </div>
+      <ul class="items" id="items"></ul>
+    </section>
+
+    <aside class="summary">
+      <form id="checkout" novalidate>
+        <h2>Your details</h2>
+        <label>Full name<input name="name" required autocomplete="name"></label>
+        <label>Email<input name="email" type="email" required autocomplete="email"></label>
+        <label>Phone <span class="muted">(optional)</span><input name="phone" type="tel" autocomplete="tel"></label>
+        <label>Company <span class="muted">(optional)</span><input name="company" autocomplete="organization"></label>
+
+        <h2>Payment method</h2>
+        <div class="gateways">
+          <label class="gw">
+            <input type="radio" name="gateway" value="flutterwave" checked>
+            <span class="gw-card">
+              <span class="gw-mark fw">F</span>
+              <span><strong>Flutterwave</strong><small>Card, bank transfer, USSD</small></span>
+            </span>
+          </label>
+          <label class="gw">
+            <input type="radio" name="gateway" value="paystack">
+            <span class="gw-card">
+              <span class="gw-mark ps">P</span>
+              <span><strong>Paystack</strong><small>Card, bank, transfer, USSD</small></span>
+            </span>
+          </label>
+        </div>
+
+        <div class="total">
+          <span>Total</span>
+          <strong id="total">₦0.00</strong>
+        </div>
+        <div class="muted small" id="usd"></div>
+        <p class="error" id="error" role="alert"></p>
+        <button class="pay" id="payBtn" type="submit">Pay now</button>
+        <p class="muted small center">You get an invoice with every item listed. It is marked paid once the payment is confirmed.</p>
+      </form>
+    </aside>
+  </div>
+</main>
+
+<dialog id="findDialog">
+  <form id="findForm" method="dialog">
+    <h2>Find my invoice</h2>
+    <label>Invoice number<input name="invoiceNumber" placeholder="INV-2026-0001" required></label>
+    <label>Email used at checkout<input name="email" type="email" required></label>
+    <p class="error" id="findError"></p>
+    <div class="row">
+      <button type="button" class="ghost" id="findCancel">Cancel</button>
+      <button type="submit" class="pay">Open invoice</button>
+    </div>
+  </form>
+</dialog>
+
+<script src="/app.js"></script>
+</body>
+</html>
