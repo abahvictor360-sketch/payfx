@@ -28,7 +28,7 @@ async function init() {
   $('#items').innerHTML = items.map((i) => `
     <li>
       <label class="item">
-        <input type="checkbox" value="${i.id}" checked>
+        <input type="checkbox" value="${i.id}"${i.test ? '' : ' checked'}>
         <span class="logo" title="${i.logoTitle}">${i.logoSvg}</span>
         <span class="text">
           <strong>${i.name}</strong>${i.subtitle ? ` <span class="sub">${i.subtitle}</span>` : ''}
@@ -40,7 +40,11 @@ async function init() {
     </li>`).join('');
   $('#items').addEventListener('change', update);
   $('#all').addEventListener('change', (e) => {
-    document.querySelectorAll('#items input').forEach((c) => { c.checked = e.target.checked; });
+    // "Select all" covers the real services, not the test item.
+    const testIds = items.filter((i) => i.test).map((i) => i.id);
+    document.querySelectorAll('#items input').forEach((c) => {
+      if (!testIds.includes(c.value)) c.checked = e.target.checked;
+    });
     update();
   });
   update();
@@ -53,9 +57,11 @@ function update() {
   const total = items.filter((i) => ids.includes(i.id)).reduce((s, i) => s + i.amount, 0);
   $('#total').textContent = naira(total);
   $('#usd').textContent = total ? `≈ US$${(total / rate).toLocaleString('en-US', { maximumFractionDigits: 2 })}` : '';
+  const services = items.filter((i) => !i.test);
+  const picked = services.filter((i) => ids.includes(i.id)).length;
   $('#count').textContent = `${ids.length} of ${items.length} selected`;
-  $('#all').checked = ids.length === items.length;
-  $('#all').indeterminate = ids.length > 0 && ids.length < items.length;
+  $('#all').checked = picked === services.length;
+  $('#all').indeterminate = picked > 0 && picked < services.length;
   $('#payBtn').disabled = !ids.length;
   document.querySelectorAll('#items li').forEach((li) => li.classList.toggle('on', li.querySelector('input').checked));
 }

@@ -106,6 +106,17 @@ const items = [
     amount: 110150,
     logo: 'monitor',
   },
+  {
+    // Small item for trying out a real payment. Not ticked by default and
+    // left out of "Select all", so clients don't pay for it by accident.
+    id: 'test',
+    name: 'Test',
+    period: 'One time',
+    purpose: 'Small payment used to check that checkout and receipts work.',
+    amount: 1000,
+    logo: 'test',
+    test: true,
+  },
 ];
 
 const byId = new Map(items.map((i) => [i.id, i]));

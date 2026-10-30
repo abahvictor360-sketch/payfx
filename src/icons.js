@@ -32,6 +32,8 @@ const logos = {
     '<path d="M7 18a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 18 9a4 4 0 0 1-.5 9"/><path d="M12 20v-7M9.5 15.5 12 13l2.5 2.5"/>'),
   monitor: outline('Uptime monitoring', '#DC2626',
     '<path d="M3 12h4l2.5-6 4 12 2.5-6H21"/>'),
+  test: outline('Test', '#6B7280',
+    '<circle cx="12" cy="12" r="9"/><path d="m8 12.5 2.5 2.5L16 9.5"/>'),
 };
 
 module.exports = { logos };
