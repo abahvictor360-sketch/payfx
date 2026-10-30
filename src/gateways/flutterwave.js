@@ -2,7 +2,7 @@
 const crypto = require('crypto');
 
 const BASE = 'https://api.flutterwave.com/v3';
-const secret = () => process.env.FLW_SECRET_KEY;
+const secret = () => (process.env.FLW_SECRET_KEY || '').trim();
 
 async function call(method, url, body) {
   const res = await fetch(BASE + url, {
@@ -56,7 +56,7 @@ async function verify(order, payRef, transactionId) {
 
 // Flutterwave sends the secret hash you set in the dashboard in `verif-hash`.
 function validWebhook(signature) {
-  const expected = process.env.FLW_SECRET_HASH;
+  const expected = (process.env.FLW_SECRET_HASH || '').trim();
   if (!signature || !expected || signature.length !== expected.length) return false;
   return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
 }

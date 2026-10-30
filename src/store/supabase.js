@@ -3,7 +3,7 @@
 const url = () => `${process.env.SUPABASE_URL.replace(/\/$/, '')}/rest/v1/payfx_orders`;
 
 async function rest(query, opts = {}) {
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY.trim();
   const res = await fetch(url() + query, {
     ...opts,
     headers: {

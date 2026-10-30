@@ -2,7 +2,7 @@
 const crypto = require('crypto');
 
 const BASE = 'https://api.paystack.co';
-const secret = () => process.env.PAYSTACK_SECRET_KEY;
+const secret = () => (process.env.PAYSTACK_SECRET_KEY || '').trim();
 
 async function call(method, url, body) {
   const res = await fetch(BASE + url, {
