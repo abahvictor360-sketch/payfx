@@ -28,7 +28,7 @@ async function initialize(order, redirectUrl) {
       phonenumber: order.customer.phone || undefined,
     },
     customizations: {
-      title: process.env.BUSINESS_NAME || 'Payment',
+      title: process.env.BUSINESS_NAME || 'PayFX',
       description: `Invoice ${order.invoiceNumber}`,
       logo: process.env.BUSINESS_LOGO_URL || undefined,
     },

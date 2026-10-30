@@ -3,7 +3,7 @@
 A small website where clients pick the services they are paying for, choose
 **Flutterwave** or **Paystack**, pay on the gateway's secure checkout, and get an
 invoice that lists every item with its logo (Supabase, Anthropic/Claude, Google
-Maps, Apple, plus icons for VPS, domain, deployment, backup and monitoring).
+Maps, Apple, Hostinger, plus icons for domain, deployment, backup and monitoring).
 
 - Invoice page at `/invoice/<ref>` with Print and **Download PDF** (logos included)
 - Invoice is marked **PAID** with the gateway transaction ID once payment is verified

@@ -11,7 +11,7 @@ async function init() {
   items = list;
   rate = config.exchangeRate;
   $('#brand').textContent = config.business;
-  document.title = `Pay for services · ${config.business}`;
+  document.title = `${config.business} · Pay for services`;
   $('#rate').textContent = `Exchange rate: US$1 = ₦${rate.toLocaleString()}. Select the services you are paying for, then choose Flutterwave or Paystack.`;
 
   for (const [name, on] of Object.entries(config.gateways)) {

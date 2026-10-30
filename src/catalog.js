@@ -16,10 +16,11 @@ const items = [
   {
     id: 'vps-hosting',
     name: 'VPS hosting',
+    subtitle: 'Hostinger',
     period: '24 months',
     purpose: 'Hosts the company website, Xpel POS, Xtend and other company apps developed in the future.',
     amount: 327600,
-    logo: 'server',
+    logo: 'hostinger',
   },
   {
     id: 'domain-name',
@@ -82,10 +83,11 @@ const items = [
   {
     id: 'vps-upgrade',
     name: 'VPS upgrade',
+    subtitle: 'Hostinger',
     period: '24 months',
     purpose: 'Adds memory and storage to the shared VPS for X Metrics processing, reports and exports.',
     amount: 163800,
-    logo: 'serverPlus',
+    logo: 'hostinger',
   },
   {
     id: 'daily-backup',
