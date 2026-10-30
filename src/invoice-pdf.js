@@ -3,46 +3,57 @@ const SVGtoPDF = require('svg-to-pdfkit');
 const { logos } = require('./icons');
 const { EXCHANGE_RATE } = require('./catalog');
 const business = require('./business');
+const { orderLogos } = require('./invoice-html');
 const { ngn, date, gatewayName } = require('./format');
 
-// The built-in PDF fonts have no ₦ glyph, so amounts are written as "NGN".
+// Black-and-white invoice/receipt. The built-in PDF fonts have no ₦ glyph,
+// so amounts are written as "NGN".
 module.exports = function renderInvoicePdf(order, stream) {
   const biz = business();
   const paid = order.status === 'paid';
-  const doc = new PDFDocument({ size: 'A4', margins: { top: 48, left: 48, right: 48, bottom: 24 }, info: { Title: `Invoice ${order.invoiceNumber}` } });
+  const doc = new PDFDocument({
+    size: 'A4',
+    margins: { top: 48, left: 48, right: 48, bottom: 24 },
+    info: { Title: `${paid ? 'Receipt' : 'Invoice'} ${order.invoiceNumber}` },
+  });
   doc.pipe(stream);
 
-  const navy = '#1F3A5F';
-  const muted = '#6B7280';
+  const black = '#000000';
+  const grey = '#555555';
+  const rule = '#BBBBBB';
   const left = 48;
   const right = doc.page.width - 48;
   const width = right - left;
 
-  // Header
-  doc.fillColor(navy).font('Helvetica-Bold').fontSize(20).text(biz.name, left, 48);
-  doc.font('Helvetica').fontSize(9).fillColor(muted)
-    .text([biz.address, biz.email, biz.phone].filter(Boolean).join('\n'), left, 74, { width: 250 });
+  // Header: logos of the items paid for, then the document title on the right.
+  const tile = 46;
+  const perRow = 7;
+  orderLogos(order).forEach((logo, i) => {
+    const x = left + (i % perRow) * tile;
+    const y = 48 + Math.floor(i / perRow) * 44;
+    SVGtoPDF(doc, logo.mono, x + 12, y, { width: 20, height: 20 });
+    doc.font('Helvetica').fontSize(6.5).fillColor(black).text(logo.title, x, y + 23, { width: tile - 2, align: 'center' });
+  });
+  const logoRows = Math.ceil(orderLogos(order).length / perRow);
 
-  doc.font('Helvetica-Bold').fontSize(22).fillColor(navy)
-    .text(paid ? 'RECEIPT' : 'INVOICE', left, 48, { width, align: 'right' });
-  doc.font('Helvetica').fontSize(9).fillColor('#111')
-    .text(`Invoice no. ${order.invoiceNumber}`, left, 76, { width, align: 'right' })
+  doc.font('Helvetica-Bold').fontSize(22).fillColor(black)
+    .text(paid ? 'RECEIPT' : 'INVOICE', left, 48, { width, align: 'right', characterSpacing: 2 });
+  doc.font('Helvetica').fontSize(9)
+    .text(`No. ${order.invoiceNumber}`, left, 76, { width, align: 'right' })
     .text(`Issued ${date(order.createdAt)}`, { width, align: 'right' });
   if (paid) doc.text(`Paid ${date(order.paidAt)}`, { width, align: 'right' });
-
-  const stampColor = paid ? '#059669' : '#B45309';
-  doc.roundedRect(right - 70, 112, 70, 22, 4).lineWidth(1.5).strokeColor(stampColor).stroke();
-  doc.font('Helvetica-Bold').fontSize(11).fillColor(stampColor)
-    .text(paid ? 'PAID' : 'UNPAID', right - 70, 118, { width: 70, align: 'center' });
+  doc.rect(right - 70, 112, 70, 22).lineWidth(1.5).strokeColor(black).stroke();
+  doc.font('Helvetica-Bold').fontSize(11).fillColor(black)
+    .text(paid ? 'PAID' : 'UNPAID', right - 70, 118, { width: 70, align: 'center', characterSpacing: 2 });
 
   // Parties
-  let y = 150;
-  doc.moveTo(left, y).lineTo(right, y).lineWidth(1).strokeColor('#B08D7A').stroke();
+  let y = Math.max(144, 48 + logoRows * 44 + 6);
+  doc.moveTo(left, y).lineTo(right, y).lineWidth(1.5).strokeColor(black).stroke();
   y += 12;
-  doc.font('Helvetica-Bold').fontSize(8).fillColor(muted).text('BILLED TO', left, y).text('PAYMENT', left + width / 2, y);
+  doc.font('Helvetica-Bold').fontSize(8).fillColor(grey).text('BILLED TO', left, y).text('PAYMENT', left + width / 2, y);
   y += 12;
   const billed = [order.customer.company, order.customer.email, order.customer.phone].filter(Boolean).join('\n');
-  doc.font('Helvetica-Bold').fontSize(10).fillColor('#111').text(order.customer.name, left, y, { width: width / 2 - 10 });
+  doc.font('Helvetica-Bold').fontSize(10).fillColor(black).text(order.customer.name, left, y, { width: width / 2 - 10 });
   doc.font('Helvetica').fontSize(9).text(billed, { width: width / 2 - 10 });
   const payLines = [
     `Method: ${gatewayName(order.gateway)}${order.channel ? ` (${order.channel})` : ''}`,
@@ -53,49 +64,56 @@ module.exports = function renderInvoicePdf(order, stream) {
   y = Math.max(doc.y, y + 40) + 12;
 
   // Table
-  const cols = { item: left + 8, period: right - 160, amount: right - 8 };
-  doc.rect(left, y, width, 22).fill(navy);
-  doc.font('Helvetica-Bold').fontSize(9).fillColor('#fff')
-    .text('Item or product', cols.item, y + 7)
-    .text('Coverage', cols.period, y + 7)
-    .text('Amount', left, y + 7, { width: width - 8, align: 'right' });
-  y += 22;
+  const cols = { item: left + 4, period: right - 160 };
+  const header = () => {
+    doc.moveTo(left, y).lineTo(right, y).lineWidth(1.5).strokeColor(black).stroke();
+    doc.font('Helvetica-Bold').fontSize(8).fillColor(black)
+      .text('ITEM OR PRODUCT', cols.item, y + 6)
+      .text('COVERAGE', cols.period, y + 6)
+      .text('AMOUNT', left, y + 6, { width: width - 4, align: 'right' });
+    y += 18;
+    doc.moveTo(left, y).lineTo(right, y).lineWidth(0.75).strokeColor(black).stroke();
+  };
+  header();
 
-  order.items.forEach((item, i) => {
+  order.items.forEach((item) => {
     const textX = cols.item + 30;
     const textW = cols.period - textX - 12;
     doc.font('Helvetica').fontSize(8);
     const purposeH = doc.heightOfString(item.purpose, { width: textW });
-    const rowH = Math.max(30, 14 + purposeH + 7);
-    if (y + rowH > doc.page.height - 60) { doc.addPage(); y = 48; }
-    if (i % 2) doc.rect(left, y, width, rowH).fill('#F5F6F8');
+    const rowH = Math.max(28, 13 + purposeH + 6);
+    if (y + rowH > doc.page.height - 60) { doc.addPage(); y = 48; header(); }
 
-    SVGtoPDF(doc, logos[item.logo].svg, cols.item, y + 6, { width: 20, height: 20 });
-    doc.font('Helvetica-Bold').fontSize(10).fillColor(navy)
+    SVGtoPDF(doc, logos[item.logo].mono, cols.item, y + 6, { width: 18, height: 18 });
+    doc.font('Helvetica-Bold').fontSize(10).fillColor(black)
       .text(item.name + (item.subtitle ? ` - ${item.subtitle}` : ''), textX, y + 5, { width: textW });
-    doc.font('Helvetica').fontSize(8).fillColor(muted).text(item.purpose, textX, doc.y + 1, { width: textW });
-    doc.font('Helvetica').fontSize(9).fillColor('#111').text(item.period, cols.period, y + 6);
-    doc.text(ngn(item.amount), left, y + 6, { width: width - 8, align: 'right' });
+    doc.font('Helvetica').fontSize(8).fillColor(grey).text(item.purpose, textX, doc.y + 1, { width: textW });
+    doc.font('Helvetica').fontSize(9).fillColor(black).text(item.period, cols.period, y + 6);
+    doc.text(ngn(item.amount), left, y + 6, { width: width - 4, align: 'right' });
     y += rowH;
-    doc.moveTo(left, y).lineTo(right, y).lineWidth(0.5).strokeColor('#E5E7EB').stroke();
+    doc.moveTo(left, y).lineTo(right, y).lineWidth(0.5).strokeColor(rule).stroke();
   });
 
   // Totals
   if (y > doc.page.height - 130) { doc.addPage(); y = 48; }
   y += 14;
   const tx = right - 240;
-  doc.font('Helvetica').fontSize(10).fillColor('#111')
+  doc.font('Helvetica').fontSize(10).fillColor(black)
     .text('Subtotal', tx, y).text(ngn(order.total), tx, y, { width: 240, align: 'right' });
-  y += 20;
-  doc.rect(tx - 8, y - 6, 248, 26).fill(navy);
-  doc.font('Helvetica-Bold').fontSize(11).fillColor('#fff')
-    .text(paid ? 'Total paid' : 'Total due', tx, y + 2).text(ngn(order.total), tx, y + 2, { width: 232, align: 'right' });
-  y += 30;
-  doc.font('Helvetica').fontSize(8).fillColor(muted)
+  y += 18;
+  doc.moveTo(tx, y).lineTo(right, y).lineWidth(1.5).strokeColor(black).stroke();
+  doc.font('Helvetica-Bold').fontSize(11)
+    .text(paid ? 'Total paid' : 'Total due', tx, y + 7).text(ngn(order.total), tx, y + 7, { width: 240, align: 'right' });
+  y += 24;
+  doc.moveTo(tx, y).lineTo(right, y).lineWidth(1.5).strokeColor(black).stroke();
+  y += 8;
+  doc.font('Helvetica').fontSize(8).fillColor(grey)
     .text(`Approx. US$${(order.total / EXCHANGE_RATE).toLocaleString('en-US', { maximumFractionDigits: 2 })} at US$1 = NGN ${EXCHANGE_RATE.toLocaleString()}`, tx, y, { width: 240, align: 'right' });
 
-  doc.fontSize(8).fillColor(muted).text(
-    paid ? 'Thank you, your payment has been received.' : 'This invoice is payable online by Flutterwave or Paystack.',
+  const contact = [biz.address, biz.email, biz.phone].filter(Boolean).join('  ·  ');
+  doc.fontSize(8).fillColor(grey).text(
+    [paid ? 'Thank you, your payment has been received.' : 'This invoice is payable online by Flutterwave or Paystack.', contact]
+      .filter(Boolean).join('\n'),
     left, y + 22, { width, align: 'center' },
   );
   doc.end();

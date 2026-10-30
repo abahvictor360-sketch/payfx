@@ -3,14 +3,20 @@ const { EXCHANGE_RATE } = require('./catalog');
 const business = require('./business');
 const { naira, date, esc, gatewayName } = require('./format');
 
+// The logos of the items on an order, once each, in order of appearance.
+const orderLogos = (order) => [...new Set(order.items.map((i) => i.logo))].map((k) => logos[k]);
+
 module.exports = function renderInvoice(order) {
   const biz = business();
   const paid = order.status === 'paid';
+  const contact = [biz.address, biz.email, biz.phone].filter(Boolean).map(esc).join(' · ');
+  const brandRow = orderLogos(order).map((l) => `
+      <span class="brand-logo">${l.mono}<span>${esc(l.title)}</span></span>`).join('');
   const rows = order.items.map((item, i) => `
       <tr>
         <td class="n">${i + 1}</td>
         <td><div class="item">
-          <span class="logo" title="${esc(logos[item.logo].title)}">${logos[item.logo].svg}</span>
+          <span class="logo" title="${esc(logos[item.logo].title)}">${logos[item.logo].mono}</span>
           <span>
             <strong>${esc(item.name)}</strong>${item.subtitle ? ` <span class="sub">· ${esc(item.subtitle)}</span>` : ''}
             <small>${esc(item.purpose)}</small>
@@ -25,7 +31,7 @@ module.exports = function renderInvoice(order) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Invoice ${esc(order.invoiceNumber)} · ${esc(biz.name)}</title>
+<title>${paid ? 'Receipt' : 'Invoice'} ${esc(order.invoiceNumber)}</title>
 <link rel="stylesheet" href="/invoice.css">
 </head>
 <body>
@@ -37,19 +43,17 @@ module.exports = function renderInvoice(order) {
     <button class="btn" onclick="window.print()">Print</button>
   </span>
 </div>
-${order.notice ? `<div class="notice ${order.noticeType || ''}">${esc(order.notice)}</div>` : ''}
+${order.notice ? `<div class="notice">${esc(order.notice)}</div>` : ''}
 <main class="invoice">
   <header>
-    <div>
-      <div class="brand">${esc(biz.name)}</div>
-      <div class="muted">${[biz.address, biz.email, biz.phone].filter(Boolean).map(esc).join('<br>')}</div>
+    <div class="brands">${brandRow}
     </div>
     <div class="meta">
       <h1>${paid ? 'Receipt' : 'Invoice'}</h1>
-      <div><span>Invoice no.</span> ${esc(order.invoiceNumber)}</div>
+      <div><span>No.</span> ${esc(order.invoiceNumber)}</div>
       <div><span>Issued</span> ${date(order.createdAt)}</div>
       ${paid ? `<div><span>Paid</span> ${date(order.paidAt)}</div>` : ''}
-      <div class="stamp ${paid ? 'paid' : 'unpaid'}">${paid ? 'PAID' : 'UNPAID'}</div>
+      <div class="stamp">${paid ? 'PAID' : 'UNPAID'}</div>
     </div>
   </header>
 
@@ -82,9 +86,11 @@ ${order.notice ? `<div class="notice ${order.noticeType || ''}">${esc(order.noti
 
   <footer class="muted small">
     ${paid ? 'Thank you, your payment has been received.' : 'This invoice is payable online by Flutterwave or Paystack.'}
-    Keep this page's link to view or download your invoice again.
+    ${contact ? `<div>${contact}</div>` : ''}
   </footer>
 </main>
 </body>
 </html>`;
 };
+
+module.exports.orderLogos = orderLogos;
