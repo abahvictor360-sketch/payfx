@@ -117,6 +117,16 @@ const items = [
     logo: 'test',
     test: true,
   },
+  {
+    id: 'test-500',
+    name: 'Test',
+    subtitle: '₦500',
+    period: 'One time',
+    purpose: 'Smaller payment used to check that checkout and receipts work.',
+    amount: 500,
+    logo: 'test',
+    test: true,
+  },
 ];
 
 const byId = new Map(items.map((i) => [i.id, i]));
