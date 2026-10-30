@@ -1,9 +1,9 @@
-// Tiny JSON-file store for orders. Good for a single server with modest
-// traffic; swap for Supabase/Postgres if volume grows.
+// JSON-file store for orders, used for local development when Supabase is
+// not configured. Not suitable for Vercel, whose filesystem is not persistent.
 const fs = require('fs');
 const path = require('path');
 
-const FILE = path.join(__dirname, '..', 'data', 'orders.json');
+const FILE = path.join(__dirname, '..', '..', 'data', 'orders.json');
 
 let state = { seq: 0, orders: {} };
 if (fs.existsSync(FILE)) state = JSON.parse(fs.readFileSync(FILE, 'utf8'));
@@ -31,7 +31,7 @@ async function create(order) {
   return order;
 }
 
-function get(ref) {
+async function get(ref) {
   return state.orders[ref] || null;
 }
 
@@ -43,14 +43,14 @@ async function update(ref, patch) {
   return order;
 }
 
-function findByInvoice(invoiceNumber, email) {
+async function findByInvoice(invoiceNumber, email) {
   return Object.values(state.orders).find(
     (o) => o.invoiceNumber.toLowerCase() === String(invoiceNumber).trim().toLowerCase()
       && o.customer.email.toLowerCase() === String(email).trim().toLowerCase(),
   ) || null;
 }
 
-function all() {
+async function all() {
   return Object.values(state.orders).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 

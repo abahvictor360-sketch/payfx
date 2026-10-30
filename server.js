@@ -17,14 +17,18 @@ const gateways = {
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const BASE_URL = (process.env.BASE_URL || `http://localhost:${PORT}`).replace(/\/$/, '');
+app.set('trust proxy', true);
+
+// Public address used in gateway redirect URLs: BASE_URL if set, else the request's host.
+const baseUrl = (req) => (process.env.BASE_URL || `${req.protocol}://${req.get('host')}`).replace(/\/$/, '');
 
 // Paystack signs the raw body, so its webhook must be parsed before express.json().
 app.post('/webhooks/paystack', express.raw({ type: '*/*' }), async (req, res) => {
   if (!gateways.paystack.validWebhook(req.body, req.get('x-paystack-signature'))) return res.sendStatus(401);
-  res.sendStatus(200);
+  // Confirm before replying: on Vercel the function stops once the response is sent.
   const event = JSON.parse(req.body.toString('utf8'));
   if (event.event === 'charge.success') await confirm(event.data?.reference).catch(console.error);
+  res.sendStatus(200);
 });
 
 app.use(express.json());
@@ -33,9 +37,9 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 app.post('/webhooks/flutterwave', async (req, res) => {
   if (!gateways.flutterwave.validWebhook(req.get('verif-hash'))) return res.sendStatus(401);
-  res.sendStatus(200);
   const data = req.body?.data || {};
   if (data.tx_ref) await confirm(data.tx_ref, data.id).catch(console.error);
+  res.sendStatus(200);
 });
 
 // Each checkout attempt gets its own payment reference (gateways reject reused
@@ -45,7 +49,7 @@ const baseRef = (payRef) => String(payRef || '').replace(/-R\d+$/, '');
 // Asks the gateway whether a payment reference is paid and records it on the
 // order. Safe to call repeatedly: from the redirect, webhooks or invoice views.
 async function confirm(payRef, transactionId) {
-  const order = store.get(baseRef(payRef));
+  const order = await store.get(baseRef(payRef));
   if (!order || order.status === 'paid') return order;
   const result = await gateways[order.gateway].verify(order, payRef, transactionId);
   if (!result.paid) return order;
@@ -85,11 +89,12 @@ app.post('/api/checkout', async (req, res) => {
     return { id, name: n, subtitle, period, purpose, amount, logo };
   });
 
+  const ref = `PFX-${Date.now().toString(36).toUpperCase()}-${crypto.randomBytes(6).toString('hex').toUpperCase()}`;
   const order = await store.create({
-    ref: `PFX-${Date.now().toString(36).toUpperCase()}-${crypto.randomBytes(6).toString('hex').toUpperCase()}`,
+    ref,
     status: 'pending',
     gateway,
-    payRef: null,
+    payRef: ref,
     customer: {
       name: String(name).trim().slice(0, 120),
       email: String(email).trim().toLowerCase().slice(0, 160),
@@ -101,10 +106,8 @@ app.post('/api/checkout', async (req, res) => {
     createdAt: new Date().toISOString(),
   });
 
-  order.payRef = order.ref;
-  await store.update(order.ref, { payRef: order.ref });
   try {
-    const url = await gateways[gateway].initialize(order, `${BASE_URL}/payment/callback/${order.payRef}`);
+    const url = await gateways[gateway].initialize(order, `${baseUrl(req)}/payment/callback/${order.payRef}`);
     res.json({ checkoutUrl: url, invoiceUrl: `/invoice/${order.ref}` });
   } catch (err) {
     console.error(err);
@@ -114,7 +117,7 @@ app.post('/api/checkout', async (req, res) => {
 
 // Re-opens checkout for an unpaid invoice with the same gateway.
 app.get('/pay/:ref', async (req, res) => {
-  let order = store.get(req.params.ref);
+  let order = await store.get(req.params.ref);
   if (!order) return res.status(404).send('Invoice not found');
   if (order.status === 'paid') return res.redirect(`/invoice/${order.ref}`);
   try {
@@ -123,7 +126,7 @@ app.get('/pay/:ref', async (req, res) => {
     if (order.status === 'paid') return res.redirect(`/invoice/${order.ref}`);
     const attempts = (order.attempts || 0) + 1;
     order = await store.update(order.ref, { attempts, payRef: `${order.ref}-R${attempts}` });
-    res.redirect(await gateways[order.gateway].initialize(order, `${BASE_URL}/payment/callback/${order.payRef}`));
+    res.redirect(await gateways[order.gateway].initialize(order, `${baseUrl(req)}/payment/callback/${order.payRef}`));
   } catch (err) {
     console.error(err);
     res.status(502).send('Could not reach the payment gateway. Please try again later.');
@@ -132,7 +135,7 @@ app.get('/pay/:ref', async (req, res) => {
 
 // Where Flutterwave (redirect_url) and Paystack (callback_url) send the customer back.
 app.get('/payment/callback/:payRef', async (req, res) => {
-  const order = store.get(baseRef(req.params.payRef));
+  const order = await store.get(baseRef(req.params.payRef));
   if (!order) return res.status(404).send('Invoice not found');
   if (req.query.status !== 'cancelled') {
     await confirm(req.params.payRef, req.query.transaction_id).catch(console.error);
@@ -140,8 +143,8 @@ app.get('/payment/callback/:payRef', async (req, res) => {
   res.redirect(`/invoice/${order.ref}`);
 });
 
-app.get('/invoice/:ref.pdf', (req, res) => {
-  const order = store.get(req.params.ref);
+app.get('/invoice/:ref.pdf', async (req, res) => {
+  const order = await store.get(req.params.ref);
   if (!order) return res.status(404).send('Invoice not found');
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', `attachment; filename="${order.invoiceNumber}.pdf"`);
@@ -149,7 +152,7 @@ app.get('/invoice/:ref.pdf', (req, res) => {
 });
 
 app.get('/invoice/:ref', async (req, res) => {
-  let order = store.get(req.params.ref);
+  let order = await store.get(req.params.ref);
   if (!order) return res.status(404).send('Invoice not found');
   if (order.status !== 'paid' && order.payRef) order = (await confirm(order.payRef).catch(() => null)) || order;
   const view = { ...order };
@@ -161,20 +164,20 @@ app.get('/invoice/:ref', async (req, res) => {
 });
 
 // Lets a client find an earlier invoice with its number and their email.
-app.post('/api/invoices/lookup', (req, res) => {
-  const order = store.findByInvoice(req.body?.invoiceNumber || '', req.body?.email || '');
+app.post('/api/invoices/lookup', async (req, res) => {
+  const order = await store.findByInvoice(req.body?.invoiceNumber || '', req.body?.email || '');
   if (!order) return res.status(404).json({ error: 'No invoice matches that number and email.' });
   res.json({ invoiceUrl: `/invoice/${order.ref}` });
 });
 
 // Simple owner view of all invoices: /admin?token=ADMIN_TOKEN
-app.get('/admin', (req, res) => {
+app.get('/admin', async (req, res) => {
   const token = process.env.ADMIN_TOKEN;
   const given = String(req.query.token || '');
   if (!token || given.length !== token.length || !crypto.timingSafeEqual(Buffer.from(given), Buffer.from(token))) {
     return res.status(401).send('Unauthorized');
   }
-  const orders = store.all();
+  const orders = await store.all();
   const paidTotal = orders.filter((o) => o.status === 'paid').reduce((s, o) => s + o.total, 0);
   const rows = orders.map((o) => `<tr>
     <td><a href="/invoice/${esc(o.ref)}">${esc(o.invoiceNumber)}</a></td><td>${date(o.createdAt)}</td>
@@ -188,4 +191,7 @@ app.get('/admin', (req, res) => {
 <tbody>${rows || '<tr><td colspan="6">No invoices yet.</td></tr>'}</tbody></table></main></body></html>`);
 });
 
-app.listen(PORT, () => console.log(`Listening on ${BASE_URL}`));
+// Vercel imports the app; locally `npm start` runs the server.
+if (require.main === module) app.listen(PORT, () => console.log(`Listening on http://localhost:${PORT}`));
+
+module.exports = app;

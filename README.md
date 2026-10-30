@@ -19,7 +19,26 @@ cp .env.example .env   # fill in your keys and business details
 npm start              # http://localhost:3000
 ```
 
-Requires Node 18 or newer. Orders are stored in `data/orders.json`, so back that file up.
+Requires Node 22. Without Supabase settings, local runs store invoices in `data/orders.json`.
+
+## Deploying on Vercel
+
+The project deploys from this GitHub repository as an Express app (`server.js`
+exports the app; `public/` is served as static files). Vercel's filesystem is not
+persistent, so invoices are stored in Supabase, in the `payfx_orders` table
+(`supabase/payfx_orders.sql`). In Vercel > Project > Settings > Environment
+Variables set:
+
+| Variable | Value |
+| --- | --- |
+| `SUPABASE_URL` | Supabase project URL |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service_role secret key |
+| `FLW_SECRET_KEY`, `FLW_SECRET_HASH` | Flutterwave keys |
+| `PAYSTACK_SECRET_KEY` | Paystack key |
+| `ADMIN_TOKEN` | password for `/admin` |
+| `BUSINESS_*` | details printed on invoices |
+
+Redeploy after changing environment variables.
 
 ## Gateway setup
 
