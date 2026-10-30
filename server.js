@@ -52,7 +52,10 @@ async function confirm(payRef, transactionId) {
   const order = await store.get(baseRef(payRef));
   if (!order || order.status === 'paid') return order;
   const result = await gateways[order.gateway].verify(order, payRef, transactionId);
-  if (!result.paid) return order;
+  if (!result.paid) {
+    console.warn(`Not paid: ${payRef} via ${order.gateway}, gateway status "${result.status}"`);
+    return order;
+  }
   return store.update(order.ref, {
     status: 'paid',
     paidAt: result.paidAt || new Date().toISOString(),
@@ -154,7 +157,7 @@ app.get('/invoice/:ref.pdf', async (req, res) => {
 app.get('/invoice/:ref', async (req, res) => {
   let order = await store.get(req.params.ref);
   if (!order) return res.status(404).send('Invoice not found');
-  if (order.status !== 'paid' && order.payRef) order = (await confirm(order.payRef).catch(() => null)) || order;
+  if (order.status !== 'paid' && order.payRef) order = (await confirm(order.payRef).catch((err) => console.warn(`Verify ${order.payRef}: ${err.message}`))) || order;
   const view = { ...order };
   if (order.status !== 'paid') {
     view.notice = 'Payment has not been confirmed for this invoice yet. If you have just paid, refresh in a moment.';
