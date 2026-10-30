@@ -119,8 +119,7 @@ const items = [
   },
   {
     id: 'test-500',
-    name: 'Test',
-    subtitle: '₦500',
+    name: 'Test 500',
     period: 'One time',
     purpose: 'Smaller payment used to check that checkout and receipts work.',
     amount: 500,
