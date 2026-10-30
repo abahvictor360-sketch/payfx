@@ -25,10 +25,11 @@ const items = [
   {
     id: 'domain-name',
     name: 'Domain name',
+    subtitle: 'Hostinger',
     period: '12 months',
     purpose: 'Annual registration of the web address where staff open and download Xtend.',
     amount: 27300,
-    logo: 'globe',
+    logo: 'hostinger',
   },
   {
     id: 'anthropic-api-claude',

@@ -26,8 +26,6 @@ const logos = {
   googlemaps: brand(si.siGooglemaps),
   apple: brand(si.siApple),
   hostinger: brand(si.siHostinger),
-  globe: outline('Domain name', '#0E7490',
-    '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/>'),
   deploy: outline('Website deployment', '#EA580C',
     '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 8h18M6 6h.01M8.5 6h.01M12 17v-6M9.5 13.5 12 11l2.5 2.5"/>'),
   backup: outline('Online backup', '#059669',
