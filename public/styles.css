@@ -63,6 +63,7 @@ label input:focus { outline: 2px solid var(--navy); outline-offset: -1px; }
 .gw input:checked + .gw-card { border-color: var(--navy); box-shadow: 0 0 0 1px var(--navy) inset; background: #f5f8fc; }
 .gw input:focus-visible + .gw-card { outline: 2px solid var(--navy); }
 .gw.off { opacity: .45; cursor: not-allowed; }
+.gw-card small.gw-note { color: var(--err); }
 .gw-mark { width: 34px; height: 34px; border-radius: 8px; display: grid; place-items: center; color: #fff; font-weight: 800; }
 .gw-mark.fw { background: #f5a623; }
 .gw-mark.ps { background: #0ba4db; }

@@ -3,6 +3,26 @@ let items = [];
 let rate = 1365;
 let currencies = {};
 let currency = 'NGN';
+let gateways = {};
+
+// Turns off payment methods that aren't set up or can't take the chosen currency.
+function refreshGateways() {
+  for (const [name, g] of Object.entries(gateways)) {
+    const input = document.querySelector(`input[name=gateway][value=${name}]`);
+    const card = input.closest('.gw');
+    const takesCurrency = g.currencies.includes(currency);
+    input.disabled = !g.on || !takesCurrency;
+    card.classList.toggle('off', input.disabled);
+    card.title = !g.on ? 'Not configured yet' : takesCurrency ? '' : `Not available for ${currency}`;
+    const note = card.querySelector('.gw-note');
+    if (note) note.textContent = g.on && !takesCurrency ? `Not available for ${currency} payments` : '';
+  }
+  const checked = document.querySelector('input[name=gateway]:checked');
+  if (!checked || checked.disabled) {
+    const firstOn = document.querySelector('input[name=gateway]:not(:disabled)');
+    if (firstOn) firstOn.checked = true;
+  }
+}
 
 const round2 = (n) => Math.round(n * 100) / 100;
 // Same conversion as the server (src/catalog.js), so the total shown is the total charged.
@@ -32,16 +52,7 @@ async function init() {
   document.title = `${config.business} · Pay for services`;
   $('#rate').textContent = `Exchange rate: US$1 = ₦${rate.toLocaleString()}. Select the services you are paying for, then choose Flutterwave or Paystack.`;
 
-  for (const [name, on] of Object.entries(config.gateways)) {
-    const input = document.querySelector(`input[name=gateway][value=${name}]`);
-    if (!on) {
-      input.disabled = true;
-      input.closest('.gw').classList.add('off');
-      input.closest('.gw').title = 'Not configured yet';
-    }
-  }
-  const firstOn = document.querySelector('input[name=gateway]:not(:disabled)');
-  if (firstOn) firstOn.checked = true;
+  gateways = config.gateways;
 
   $('#items').innerHTML = items.map((i) => `
     <li>
@@ -71,6 +82,7 @@ async function init() {
 const selected = () => [...document.querySelectorAll('#items input:checked')].map((c) => c.value);
 
 function update() {
+  refreshGateways();
   const ids = selected();
   document.querySelectorAll('#items .amount').forEach((el) => { el.textContent = money(convert(Number(el.dataset.ngn))); });
   const chosen = items.filter((i) => ids.includes(i.id));

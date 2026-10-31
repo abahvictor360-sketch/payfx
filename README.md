@@ -67,8 +67,10 @@ swap in live keys. A gateway without a key is shown as unavailable at checkout.
 Clients choose to pay in Naira (NGN) or US dollars (USD) at checkout. Prices are
 set in Naira in `src/catalog.js` and converted at US$1 = ₦1,365; set `USD_RATE`
 to change the rate. Each invoice keeps the currency and rate it was created with.
-To take USD, dollar payments must be enabled on your Flutterwave and Paystack
-accounts.
+`FLW_CURRENCIES` (default `NGN,USD`) and `PAYSTACK_CURRENCIES` (default `NGN`)
+list what each gateway account can take; a gateway is hidden at checkout for
+other currencies. Add `USD` to `PAYSTACK_CURRENCIES` once Paystack enables
+dollar payments on your account.
 
 ## Changing the items
 

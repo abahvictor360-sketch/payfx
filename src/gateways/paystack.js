@@ -54,4 +54,8 @@ function validWebhook(rawBody, signature) {
   return hash.length === signature.length && crypto.timingSafeEqual(Buffer.from(hash), Buffer.from(signature));
 }
 
-module.exports = { initialize, verify, validWebhook, configured: () => Boolean(secret()) };
+// Currencies this account can be charged in (PAYSTACK_CURRENCIES, comma-separated).
+// Paystack only takes USD once it is enabled on the merchant account.
+const currencies = () => (process.env.PAYSTACK_CURRENCIES || 'NGN').split(',').map((c) => c.trim().toUpperCase());
+
+module.exports = { initialize, verify, validWebhook, currencies, configured: () => Boolean(secret()) };

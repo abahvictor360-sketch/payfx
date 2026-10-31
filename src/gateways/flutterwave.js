@@ -62,4 +62,7 @@ function validWebhook(signature) {
   return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
 }
 
-module.exports = { initialize, verify, validWebhook, configured: () => Boolean(secret()) };
+// Currencies this account can be charged in (FLW_CURRENCIES, comma-separated).
+const currencies = () => (process.env.FLW_CURRENCIES || 'NGN,USD').split(',').map((c) => c.trim().toUpperCase());
+
+module.exports = { initialize, verify, validWebhook, currencies, configured: () => Boolean(secret()) };

@@ -70,7 +70,7 @@ app.get('/api/config', (req, res) => {
     business: business().name,
     exchangeRate: catalog.EXCHANGE_RATE,
     currencies: catalog.CURRENCIES,
-    gateways: Object.fromEntries(Object.entries(gateways).map(([k, g]) => [k, g.configured()])),
+    gateways: Object.fromEntries(Object.entries(gateways).map(([k, g]) => [k, { on: g.configured(), currencies: g.currencies() }])),
   });
 });
 
@@ -85,6 +85,9 @@ app.post('/api/checkout', async (req, res) => {
   if (!name || !/^\S+@\S+\.\S+$/.test(email || '')) return res.status(400).json({ error: 'Enter your name and a valid email.' });
   if (!gateways[gateway]) return res.status(400).json({ error: 'Choose Flutterwave or Paystack.' });
   if (!gateways[gateway].configured()) return res.status(400).json({ error: `${gatewayName(gateway)} is not available right now.` });
+  if (!gateways[gateway].currencies().includes(currency)) {
+    return res.status(400).json({ error: `${gatewayName(gateway)} does not accept ${currency}. Choose another payment method or currency.` });
+  }
 
   // Prices always come from the server catalog, never from the browser, and
   // are converted here into the currency the client picked.
