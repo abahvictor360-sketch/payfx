@@ -28,6 +28,16 @@ body { margin: 0; font: 15px/1.5 "Segoe UI", system-ui, -apple-system, Roboto, s
 .layout { display: grid; grid-template-columns: 1fr 360px; gap: 24px; align-items: start; padding-bottom: 48px; }
 @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
 
+.pay-one { display: block; padding: 0 16px 12px 104px; margin-top: -6px; font-size: 13.5px; font-weight: 600; color: var(--navy); text-decoration: none; }
+.pay-one:hover { text-decoration: underline; }
+.back { display: none; color: var(--navy); font-size: 14px; text-decoration: none; margin-bottom: 6px; }
+
+/* Single-item page (/?item=<id>): just that item, no selection controls. */
+.single .back { display: inline-block; }
+.single .num, .single .list-head, .single .pay-one, .single .item input { display: none; }
+.single .item { grid-template-columns: 44px 1fr auto; cursor: default; }
+.single .items li.on { border-color: var(--line); box-shadow: none; }
+
 .list-head { display: flex; justify-content: space-between; align-items: center; margin: 8px 0 10px; }
 .check { display: inline-flex; gap: 8px; align-items: center; cursor: pointer; font-weight: 600; }
 
@@ -46,6 +56,9 @@ body { margin: 0; font: 15px/1.5 "Segoe UI", system-ui, -apple-system, Roboto, s
 @media (max-width: 600px) {
   .item { grid-template-columns: auto 40px 1fr; }
   .amount { grid-column: 3; }
+  .pay-one { padding-left: 100px; }
+  .single .item { grid-template-columns: 40px 1fr; }
+  .single .amount { grid-column: 2; }
 }
 
 .summary { position: sticky; top: 16px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 20px; }

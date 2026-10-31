@@ -34,7 +34,13 @@ async function init() {
     fetch('/api/config').then((r) => r.json()),
     fetch('/api/items').then((r) => r.json()),
   ]);
-  items = list;
+  // /?item=<id> opens a page for paying for that one item.
+  const single = list.find((i) => i.id === new URLSearchParams(location.search).get('item'));
+  items = single ? [single] : list;
+  if (single) {
+    document.body.classList.add('single');
+    $('#heading').textContent = `Pay for ${single.name}${single.subtitle ? ` (${single.subtitle})` : ''}`;
+  }
   rate = config.exchangeRate;
   currencies = config.currencies;
   try { if (currencies[localStorage.getItem('payfx-currency')]) currency = localStorage.getItem('payfx-currency'); } catch {}
@@ -50,14 +56,16 @@ async function init() {
   });
   $('#brand').textContent = config.business;
   document.title = `${config.business} · Pay for services`;
-  $('#rate').textContent = `Exchange rate: US$1 = ₦${rate.toLocaleString()}. Select the services you are paying for, then choose Flutterwave or Paystack.`;
+  $('#rate').textContent = single
+    ? `Exchange rate: US$1 = ₦${rate.toLocaleString()}. Enter your details, then choose how to pay.`
+    : `Exchange rate: US$1 = ₦${rate.toLocaleString()}. Select the services you are paying for, or open one to pay for it alone.`;
 
   gateways = config.gateways;
 
   $('#items').innerHTML = items.map((i) => `
     <li>
       <label class="item">
-        <input type="checkbox" value="${i.id}"${i.test ? '' : ' checked'}>
+        <input type="checkbox" value="${i.id}"${single ? ' checked disabled' : i.test ? '' : ' checked'}>
         <span class="logo" title="${i.logoTitle}">${i.logoSvg}</span>
         <span class="text">
           <strong>${i.name}</strong>${i.subtitle ? ` <span class="sub">${i.subtitle}</span>` : ''}
@@ -66,6 +74,7 @@ async function init() {
         </span>
         <span class="amount" data-ngn="${i.amount}"></span>
       </label>
+      <a class="pay-one" href="/?item=${encodeURIComponent(i.id)}">Pay for this only &rarr;</a>
     </li>`).join('');
   $('#items').addEventListener('change', update);
   $('#all').addEventListener('change', (e) => {
