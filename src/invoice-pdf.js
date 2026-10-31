@@ -56,13 +56,14 @@ module.exports = function renderInvoicePdf(order, stream) {
   const billed = [order.customer.company, order.customer.email, order.customer.phone].filter(Boolean).join('\n');
   doc.font('Helvetica-Bold').fontSize(10).fillColor(black).text(order.customer.name, left, y, { width: width / 2 - 10 });
   doc.font('Helvetica').fontSize(9).text(billed, { width: width / 2 - 10 });
+  const billedBottom = doc.y;
   const payLines = [
     `Method: ${gatewayName(order.gateway)}${order.channel ? ` (${order.channel})` : ''}`,
     `Reference: ${order.ref}`,
     order.transactionId ? `Transaction ID: ${order.transactionId}` : null,
   ].filter(Boolean).join('\n');
   doc.text(payLines, left + width / 2, y, { width: width / 2 });
-  y = Math.max(doc.y, y + 40) + 12;
+  y = Math.max(doc.y, billedBottom, y + 40) + 12;
 
   // Table
   const cols = { item: left + 4, period: right - 160 };
