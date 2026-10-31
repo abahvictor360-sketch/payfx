@@ -15,10 +15,8 @@ async function call(method, url, body) {
   return json.data;
 }
 
-// Returns the hosted checkout URL to send the customer to. The billing address
-// goes in `meta`, which Flutterwave stores on the transaction.
+// Returns the hosted checkout URL to send the customer to.
 async function initialize(order, redirectUrl) {
-  const a = order.customer.address || {};
   const data = await call('POST', '/payments', {
     tx_ref: order.payRef,
     amount: order.total,
@@ -34,14 +32,7 @@ async function initialize(order, redirectUrl) {
       description: `Invoice ${order.invoiceNumber}`,
       logo: process.env.BUSINESS_LOGO_URL || undefined,
     },
-    meta: {
-      invoice: order.invoiceNumber,
-      billing_address: a.line1,
-      billing_city: a.city,
-      billing_state: a.state,
-      billing_country: a.country,
-      billing_zip: a.postcode || undefined,
-    },
+    meta: { invoice: order.invoiceNumber },
   });
   return data.link;
 }

@@ -9,10 +9,6 @@ const date = (iso) => new Date(iso).toLocaleDateString('en-GB', { day: 'numeric'
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const gatewayName = (g) => ({ flutterwave: 'Flutterwave', paystack: 'Paystack' }[g] || g);
 
-// Billing address as lines for invoices; orders made before addresses were
-// collected have none.
-const addressLines = (a) => (a ? [a.line1, [a.city, a.state, a.postcode].filter(Boolean).join(', '), a.country].filter(Boolean) : []);
-
 // Line under the totals: the other currency's equivalent at the order's rate.
 // Orders made before currencies were added have no currency/rate and are NGN.
 function equivalent(order, fmt) {
@@ -22,4 +18,4 @@ function equivalent(order, fmt) {
   return `Charged in ${currency} at US$1 = ${fmt(rate, 'NGN')} (${fmt(order.ngnTotal, 'NGN')})`;
 }
 
-module.exports = { money, moneyPdf, date, esc, gatewayName, equivalent, addressLines };
+module.exports = { money, moneyPdf, date, esc, gatewayName, equivalent };

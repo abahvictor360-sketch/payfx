@@ -3,7 +3,7 @@ const SVGtoPDF = require('svg-to-pdfkit');
 const { logos } = require('./icons');
 const business = require('./business');
 const { orderLogos } = require('./invoice-html');
-const { moneyPdf, date, gatewayName, equivalent, addressLines } = require('./format');
+const { moneyPdf, date, gatewayName, equivalent } = require('./format');
 
 // Black-and-white invoice/receipt. The built-in PDF fonts have no ₦ glyph,
 // so amounts are written with the currency code ("NGN", "USD").
@@ -53,18 +53,16 @@ module.exports = function renderInvoicePdf(order, stream) {
   y += 12;
   doc.font('Helvetica-Bold').fontSize(8).fillColor(grey).text('BILLED TO', left, y).text('PAYMENT', left + width / 2, y);
   y += 12;
-  const billed = [order.customer.company, ...addressLines(order.customer.address), order.customer.email, order.customer.phone]
-    .filter(Boolean).join('\n');
+  const billed = [order.customer.company, order.customer.email, order.customer.phone].filter(Boolean).join('\n');
   doc.font('Helvetica-Bold').fontSize(10).fillColor(black).text(order.customer.name, left, y, { width: width / 2 - 10 });
   doc.font('Helvetica').fontSize(9).text(billed, { width: width / 2 - 10 });
-  const billedBottom = doc.y;
   const payLines = [
     `Method: ${gatewayName(order.gateway)}${order.channel ? ` (${order.channel})` : ''}`,
     `Reference: ${order.ref}`,
     order.transactionId ? `Transaction ID: ${order.transactionId}` : null,
   ].filter(Boolean).join('\n');
   doc.text(payLines, left + width / 2, y, { width: width / 2 });
-  y = Math.max(doc.y, billedBottom, y + 40) + 12;
+  y = Math.max(doc.y, y + 40) + 12;
 
   // Table
   const cols = { item: left + 4, period: right - 160 };

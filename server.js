@@ -81,13 +81,8 @@ app.get('/api/items', (req, res) => {
 // Creates the order and invoice, then hands back the gateway checkout URL.
 app.post('/api/checkout', async (req, res) => {
   const { name, email, phone, company, gateway, items } = req.body || {};
-  const field = (k, max = 120) => String(req.body?.[k] || '').trim().slice(0, max);
-  const address = { line1: field('line1', 200), city: field('city'), state: field('state'), country: field('country', 80), postcode: field('postcode', 20) };
   const currency = catalog.CURRENCIES[req.body?.currency] ? req.body.currency : 'NGN';
   if (!name || !/^\S+@\S+\.\S+$/.test(email || '')) return res.status(400).json({ error: 'Enter your name and a valid email.' });
-  if (!address.line1 || !address.city || !address.state || !address.country) {
-    return res.status(400).json({ error: 'Enter your billing address: street, city, state and country.' });
-  }
   if (!gateways[gateway]) return res.status(400).json({ error: 'Choose Flutterwave or Paystack.' });
   if (!gateways[gateway].configured()) return res.status(400).json({ error: `${gatewayName(gateway)} is not available right now.` });
   if (!gateways[gateway].currencies().includes(currency)) {
@@ -114,7 +109,6 @@ app.post('/api/checkout', async (req, res) => {
       email: String(email).trim().toLowerCase().slice(0, 160),
       phone: String(phone || '').trim().slice(0, 40),
       company: String(company || '').trim().slice(0, 120),
-      address,
     },
     currency,
     rate: catalog.EXCHANGE_RATE,

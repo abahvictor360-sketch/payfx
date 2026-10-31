@@ -1,6 +1,6 @@
 const { logos } = require('./icons');
 const business = require('./business');
-const { money, date, esc, gatewayName, equivalent, addressLines } = require('./format');
+const { money, date, esc, gatewayName, equivalent } = require('./format');
 
 // The logos of the items on an order, once each, in order of appearance.
 const orderLogos = (order) => [...new Set(order.items.map((i) => i.logo))].map((k) => logos[k]);
@@ -62,7 +62,6 @@ ${order.notice ? `<div class="notice">${esc(order.notice)}</div>` : ''}
       <h3>Billed to</h3>
       <strong>${esc(order.customer.name)}</strong>
       ${order.customer.company ? `<div>${esc(order.customer.company)}</div>` : ''}
-      ${addressLines(order.customer.address).map((l) => `<div>${esc(l)}</div>`).join('')}
       <div>${esc(order.customer.email)}</div>
       ${order.customer.phone ? `<div>${esc(order.customer.phone)}</div>` : ''}
     </div>

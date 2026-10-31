@@ -15,11 +15,8 @@ async function call(method, url, body) {
   return json.data;
 }
 
-// Returns the hosted checkout URL to send the customer to. The billing address
-// goes in `metadata`; custom_fields also show it on the Paystack dashboard.
+// Returns the hosted checkout URL to send the customer to.
 async function initialize(order, callbackUrl) {
-  const a = order.customer.address || {};
-  const address = [a.line1, a.city, a.state, a.postcode, a.country].filter(Boolean).join(', ');
   const data = await call('POST', '/transaction/initialize', {
     email: order.customer.email,
     amount: Math.round(order.total * 100), // kobo or cents
@@ -28,12 +25,9 @@ async function initialize(order, callbackUrl) {
     callback_url: callbackUrl,
     metadata: {
       invoice: order.invoiceNumber,
-      billing_address: order.customer.address,
       custom_fields: [
         { display_name: 'Invoice', variable_name: 'invoice', value: order.invoiceNumber },
         { display_name: 'Customer', variable_name: 'customer', value: order.customer.name },
-        { display_name: 'Phone', variable_name: 'phone', value: order.customer.phone || '-' },
-        { display_name: 'Billing address', variable_name: 'billing_address', value: address || '-' },
       ],
     },
   });

@@ -120,10 +120,6 @@ $('#checkout').addEventListener('submit', async (e) => {
     $('#error').textContent = 'Enter your name and a valid email.';
     return;
   }
-  if (!['line1', 'city', 'state', 'country'].every((k) => body[k].trim())) {
-    $('#error').textContent = 'Enter your billing address: street, city, state and country.';
-    return;
-  }
   if (!body.gateway) {
     $('#error').textContent = 'No payment method is available right now.';
     return;
