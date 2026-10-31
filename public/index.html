@@ -38,6 +38,17 @@
         <label>Phone <span class="muted">(optional)</span><input name="phone" type="tel" autocomplete="tel"></label>
         <label>Company <span class="muted">(optional)</span><input name="company" autocomplete="organization"></label>
 
+        <h2>Billing address</h2>
+        <label>Street address<input name="line1" required autocomplete="address-line1"></label>
+        <div class="row2">
+          <label>City<input name="city" required autocomplete="address-level2"></label>
+          <label>State / region<input name="state" required autocomplete="address-level1"></label>
+        </div>
+        <div class="row2">
+          <label>Country<input name="country" required autocomplete="country-name" value="Nigeria"></label>
+          <label>Postcode <span class="muted">(optional)</span><input name="postcode" autocomplete="postal-code"></label>
+        </div>
+
         <h2>Payment method</h2>
         <div class="gateways">
           <label class="gw">
