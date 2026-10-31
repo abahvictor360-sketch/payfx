@@ -1,7 +1,6 @@
 const { logos } = require('./icons');
-const { EXCHANGE_RATE } = require('./catalog');
 const business = require('./business');
-const { naira, date, esc, gatewayName } = require('./format');
+const { money, date, esc, gatewayName, equivalent } = require('./format');
 
 // The logos of the items on an order, once each, in order of appearance.
 const orderLogos = (order) => [...new Set(order.items.map((i) => i.logo))].map((k) => logos[k]);
@@ -9,6 +8,7 @@ const orderLogos = (order) => [...new Set(order.items.map((i) => i.logo))].map((
 module.exports = function renderInvoice(order) {
   const biz = business();
   const paid = order.status === 'paid';
+  const currency = order.currency || 'NGN';
   const contact = [biz.address, biz.email, biz.phone].filter(Boolean).map(esc).join(' · ');
   const brandRow = orderLogos(order).map((l) => `
       <span class="brand-logo">${l.mono}<span>${esc(l.title)}</span></span>`).join('');
@@ -23,7 +23,7 @@ module.exports = function renderInvoice(order) {
           </span>
         </div></td>
         <td class="nowrap">${esc(item.period)}</td>
-        <td class="amt">${naira(item.amount)}</td>
+        <td class="amt">${money(item.amount, currency)}</td>
       </tr>`).join('');
 
   return `<!doctype html>
@@ -79,9 +79,9 @@ ${order.notice ? `<div class="notice">${esc(order.notice)}</div>` : ''}
   </table>
 
   <div class="totals">
-    <div><span>Subtotal</span><span>${naira(order.total)}</span></div>
-    <div class="grand"><span>Total ${paid ? 'paid' : 'due'}</span><span>${naira(order.total)}</span></div>
-    <div class="muted small"><span>Approx. USD at US$1 = ₦${EXCHANGE_RATE.toLocaleString()}</span><span>US$${(order.total / EXCHANGE_RATE).toLocaleString('en-US', { maximumFractionDigits: 2 })}</span></div>
+    <div><span>Subtotal</span><span>${money(order.total, currency)}</span></div>
+    <div class="grand"><span>Total ${paid ? 'paid' : 'due'}</span><span>${money(order.total, currency)}</span></div>
+    <div class="muted small"><span>${esc(equivalent(order, money))}</span></div>
   </div>
 
   <footer class="muted small">

@@ -1,7 +1,13 @@
 const $ = (s) => document.querySelector(s);
-const naira = (n) => `₦${n.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 let items = [];
 let rate = 1365;
+let currencies = {};
+let currency = 'NGN';
+
+const round2 = (n) => Math.round(n * 100) / 100;
+// Same conversion as the server (src/catalog.js), so the total shown is the total charged.
+const convert = (ngn, cur = currency) => round2(ngn * currencies[cur].perNgn);
+const money = (n, cur = currency) => `${currencies[cur].symbol}${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 async function init() {
   const [config, list] = await Promise.all([
@@ -10,6 +16,18 @@ async function init() {
   ]);
   items = list;
   rate = config.exchangeRate;
+  currencies = config.currencies;
+  try { if (currencies[localStorage.getItem('payfx-currency')]) currency = localStorage.getItem('payfx-currency'); } catch {}
+  $('#currencies').innerHTML = Object.values(currencies).map((c) => `
+    <label class="cur">
+      <input type="radio" name="currency" value="${c.code}"${c.code === currency ? ' checked' : ''}>
+      <span>${c.symbol} ${c.code}</span>
+    </label>`).join('');
+  $('#currencies').addEventListener('change', (e) => {
+    currency = e.target.value;
+    try { localStorage.setItem('payfx-currency', currency); } catch {}
+    update();
+  });
   $('#brand').textContent = config.business;
   document.title = `${config.business} · Pay for services`;
   $('#rate').textContent = `Exchange rate: US$1 = ₦${rate.toLocaleString()}. Select the services you are paying for, then choose Flutterwave or Paystack.`;
@@ -35,7 +53,7 @@ async function init() {
           <span class="period">${i.period}</span>
           <span class="purpose">${i.purpose}</span>
         </span>
-        <span class="amount">${naira(i.amount)}</span>
+        <span class="amount" data-ngn="${i.amount}"></span>
       </label>
     </li>`).join('');
   $('#items').addEventListener('change', update);
@@ -54,9 +72,13 @@ const selected = () => [...document.querySelectorAll('#items input:checked')].ma
 
 function update() {
   const ids = selected();
-  const total = items.filter((i) => ids.includes(i.id)).reduce((s, i) => s + i.amount, 0);
-  $('#total').textContent = naira(total);
-  $('#usd').textContent = total ? `≈ US$${(total / rate).toLocaleString('en-US', { maximumFractionDigits: 2 })}` : '';
+  document.querySelectorAll('#items .amount').forEach((el) => { el.textContent = money(convert(Number(el.dataset.ngn))); });
+  const chosen = items.filter((i) => ids.includes(i.id));
+  const total = round2(chosen.reduce((s, i) => s + convert(i.amount), 0));
+  const ngnTotal = chosen.reduce((s, i) => s + i.amount, 0);
+  $('#total').textContent = money(total);
+  $('#equiv').textContent = !total ? ''
+    : currency === 'NGN' ? `≈ ${money(convert(ngnTotal, 'USD'), 'USD')}` : `≈ ${money(ngnTotal, 'NGN')}`;
   const services = items.filter((i) => !i.test);
   const picked = services.filter((i) => ids.includes(i.id)).length;
   $('#count').textContent = `${ids.length} of ${items.length} selected`;
@@ -71,6 +93,7 @@ $('#checkout').addEventListener('submit', async (e) => {
   const form = new FormData(e.target);
   const body = Object.fromEntries(form);
   body.items = selected();
+  body.currency = currency;
   $('#error').textContent = '';
   if (!body.name.trim() || !/^\S+@\S+\.\S+$/.test(body.email)) {
     $('#error').textContent = 'Enter your name and a valid email.';

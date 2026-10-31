@@ -1,8 +1,18 @@
 // Items and funding required (section 07). Amounts are in Naira.
-// Exchange rate used for these figures: US$1 = ₦1,365.
+// Exchange rate used for these figures: US$1 = ₦1,365 (override with USD_RATE).
 // To add, remove or reprice an item, edit this list and restart the server.
 
-const EXCHANGE_RATE = 1365;
+const EXCHANGE_RATE = Number(process.env.USD_RATE) || 1365;
+
+// Currencies a client can pay in. Catalog prices are in Naira and converted
+// at checkout; `perNgn` is how much of the currency one Naira buys.
+const CURRENCIES = {
+  NGN: { code: 'NGN', symbol: '₦', perNgn: 1 },
+  USD: { code: 'USD', symbol: 'US$', perNgn: 1 / EXCHANGE_RATE },
+};
+
+const round2 = (n) => Math.round(n * 100) / 100;
+const convert = (ngnAmount, currency) => round2(ngnAmount * CURRENCIES[currency].perNgn);
 
 const items = [
   {
@@ -130,4 +140,4 @@ const items = [
 
 const byId = new Map(items.map((i) => [i.id, i]));
 
-module.exports = { items, byId, EXCHANGE_RATE };
+module.exports = { items, byId, EXCHANGE_RATE, CURRENCIES, convert, round2 };

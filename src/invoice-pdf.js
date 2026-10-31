@@ -1,16 +1,17 @@
 const PDFDocument = require('pdfkit');
 const SVGtoPDF = require('svg-to-pdfkit');
 const { logos } = require('./icons');
-const { EXCHANGE_RATE } = require('./catalog');
 const business = require('./business');
 const { orderLogos } = require('./invoice-html');
-const { ngn, date, gatewayName } = require('./format');
+const { moneyPdf, date, gatewayName, equivalent } = require('./format');
 
 // Black-and-white invoice/receipt. The built-in PDF fonts have no ₦ glyph,
-// so amounts are written as "NGN".
+// so amounts are written with the currency code ("NGN", "USD").
 module.exports = function renderInvoicePdf(order, stream) {
   const biz = business();
   const paid = order.status === 'paid';
+  const currency = order.currency || 'NGN';
+  const fmt = (n) => moneyPdf(n, currency);
   const doc = new PDFDocument({
     size: 'A4',
     margins: { top: 48, left: 48, right: 48, bottom: 24 },
@@ -89,7 +90,7 @@ module.exports = function renderInvoicePdf(order, stream) {
       .text(item.name + (item.subtitle ? ` - ${item.subtitle}` : ''), textX, y + 5, { width: textW });
     doc.font('Helvetica').fontSize(8).fillColor(grey).text(item.purpose, textX, doc.y + 1, { width: textW });
     doc.font('Helvetica').fontSize(9).fillColor(black).text(item.period, cols.period, y + 6);
-    doc.text(ngn(item.amount), left, y + 6, { width: width - 4, align: 'right' });
+    doc.text(fmt(item.amount), left, y + 6, { width: width - 4, align: 'right' });
     y += rowH;
     doc.moveTo(left, y).lineTo(right, y).lineWidth(0.5).strokeColor(rule).stroke();
   });
@@ -99,16 +100,16 @@ module.exports = function renderInvoicePdf(order, stream) {
   y += 14;
   const tx = right - 240;
   doc.font('Helvetica').fontSize(10).fillColor(black)
-    .text('Subtotal', tx, y).text(ngn(order.total), tx, y, { width: 240, align: 'right' });
+    .text('Subtotal', tx, y).text(fmt(order.total), tx, y, { width: 240, align: 'right' });
   y += 18;
   doc.moveTo(tx, y).lineTo(right, y).lineWidth(1.5).strokeColor(black).stroke();
   doc.font('Helvetica-Bold').fontSize(11)
-    .text(paid ? 'Total paid' : 'Total due', tx, y + 7).text(ngn(order.total), tx, y + 7, { width: 240, align: 'right' });
+    .text(paid ? 'Total paid' : 'Total due', tx, y + 7).text(fmt(order.total), tx, y + 7, { width: 240, align: 'right' });
   y += 24;
   doc.moveTo(tx, y).lineTo(right, y).lineWidth(1.5).strokeColor(black).stroke();
   y += 8;
   doc.font('Helvetica').fontSize(8).fillColor(grey)
-    .text(`Approx. US$${(order.total / EXCHANGE_RATE).toLocaleString('en-US', { maximumFractionDigits: 2 })} at US$1 = NGN ${EXCHANGE_RATE.toLocaleString()}`, tx, y, { width: 240, align: 'right' });
+    .text(equivalent(order, moneyPdf), tx - 60, y, { width: 300, align: 'right' });
 
   const contact = [biz.address, biz.email, biz.phone].filter(Boolean).join('  ·  ');
   doc.fontSize(8).fillColor(grey).text(

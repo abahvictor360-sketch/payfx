@@ -9,7 +9,7 @@ const store = require('./src/store');
 const business = require('./src/business');
 const renderInvoice = require('./src/invoice-html');
 const renderInvoicePdf = require('./src/invoice-pdf');
-const { esc, naira, date, gatewayName } = require('./src/format');
+const { esc, money, date, gatewayName } = require('./src/format');
 const gateways = {
   flutterwave: require('./src/gateways/flutterwave'),
   paystack: require('./src/gateways/paystack'),
@@ -69,6 +69,7 @@ app.get('/api/config', (req, res) => {
   res.json({
     business: business().name,
     exchangeRate: catalog.EXCHANGE_RATE,
+    currencies: catalog.CURRENCIES,
     gateways: Object.fromEntries(Object.entries(gateways).map(([k, g]) => [k, g.configured()])),
   });
 });
@@ -80,16 +81,18 @@ app.get('/api/items', (req, res) => {
 // Creates the order and invoice, then hands back the gateway checkout URL.
 app.post('/api/checkout', async (req, res) => {
   const { name, email, phone, company, gateway, items } = req.body || {};
+  const currency = catalog.CURRENCIES[req.body?.currency] ? req.body.currency : 'NGN';
   if (!name || !/^\S+@\S+\.\S+$/.test(email || '')) return res.status(400).json({ error: 'Enter your name and a valid email.' });
   if (!gateways[gateway]) return res.status(400).json({ error: 'Choose Flutterwave or Paystack.' });
   if (!gateways[gateway].configured()) return res.status(400).json({ error: `${gatewayName(gateway)} is not available right now.` });
 
-  // Prices always come from the server catalog, never from the browser.
+  // Prices always come from the server catalog, never from the browser, and
+  // are converted here into the currency the client picked.
   const ids = [...new Set(Array.isArray(items) ? items : [])].filter((id) => catalog.byId.has(id));
   if (!ids.length) return res.status(400).json({ error: 'Select at least one item.' });
   const lines = ids.map((id) => {
     const { name: n, subtitle, period, purpose, amount, logo } = catalog.byId.get(id);
-    return { id, name: n, subtitle, period, purpose, amount, logo };
+    return { id, name: n, subtitle, period, purpose, amount: catalog.convert(amount, currency), ngnAmount: amount, logo };
   });
 
   const ref = `PFX-${Date.now().toString(36).toUpperCase()}-${crypto.randomBytes(6).toString('hex').toUpperCase()}`;
@@ -104,8 +107,11 @@ app.post('/api/checkout', async (req, res) => {
       phone: String(phone || '').trim().slice(0, 40),
       company: String(company || '').trim().slice(0, 120),
     },
+    currency,
+    rate: catalog.EXCHANGE_RATE,
     items: lines,
-    total: lines.reduce((s, l) => s + l.amount, 0),
+    total: catalog.round2(lines.reduce((s, l) => s + l.amount, 0)),
+    ngnTotal: lines.reduce((s, l) => s + l.ngnAmount, 0),
     createdAt: new Date().toISOString(),
   });
 
@@ -181,15 +187,20 @@ app.get('/admin', async (req, res) => {
     return res.status(401).send('Unauthorized');
   }
   const orders = await store.all();
-  const paidTotal = orders.filter((o) => o.status === 'paid').reduce((s, o) => s + o.total, 0);
+  const received = {};
+  for (const o of orders.filter((x) => x.status === 'paid')) {
+    const c = o.currency || 'NGN';
+    received[c] = (received[c] || 0) + o.total;
+  }
+  const receivedText = Object.entries(received).map(([c, t]) => money(t, c)).join(' + ') || money(0);
   const rows = orders.map((o) => `<tr>
     <td><a href="/invoice/${esc(o.ref)}">${esc(o.invoiceNumber)}</a></td><td>${date(o.createdAt)}</td>
     <td>${esc(o.customer.name)}<br><small>${esc(o.customer.email)}</small></td>
-    <td>${esc(gatewayName(o.gateway))}</td><td class="amt">${naira(o.total)}</td>
+    <td>${esc(gatewayName(o.gateway))}</td><td class="amt">${money(o.total, o.currency || 'NGN')}</td>
     <td><span class="pill ${o.status}">${esc(o.status)}</span></td></tr>`).join('');
   res.send(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Invoices · ${esc(business().name)}</title><link rel="stylesheet" href="/invoice.css"></head><body>
-<main class="invoice"><h1>Invoices</h1><p class="muted">${orders.length} invoices · ${naira(paidTotal)} received</p>
+<main class="invoice"><h1>Invoices</h1><p class="muted">${orders.length} invoices · ${receivedText} received</p>
 <table><thead><tr><th>Invoice</th><th>Date</th><th>Client</th><th>Gateway</th><th class="amt">Total</th><th>Status</th></tr></thead>
 <tbody>${rows || '<tr><td colspan="6">No invoices yet.</td></tr>'}</tbody></table></main></body></html>`);
 });

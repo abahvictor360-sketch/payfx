@@ -20,7 +20,7 @@ async function initialize(order, redirectUrl) {
   const data = await call('POST', '/payments', {
     tx_ref: order.payRef,
     amount: order.total,
-    currency: 'NGN',
+    currency: order.currency || 'NGN',
     redirect_url: redirectUrl,
     customer: {
       email: order.customer.email,
@@ -44,7 +44,8 @@ async function verify(order, payRef, transactionId) {
     ? await call('GET', `/transactions/${encodeURIComponent(transactionId)}/verify`)
     : await call('GET', `/transactions/verify_by_reference?tx_ref=${encodeURIComponent(payRef)}`);
   const ok = data.tx_ref === payRef && data.status === 'successful'
-    && data.currency === 'NGN' && Number(data.amount) >= order.total;
+    && data.currency === (order.currency || 'NGN')
+    && Math.round(Number(data.amount) * 100) >= Math.round(order.total * 100);
   return {
     paid: ok,
     status: data.status,

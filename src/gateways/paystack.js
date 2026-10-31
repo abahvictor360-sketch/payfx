@@ -19,8 +19,8 @@ async function call(method, url, body) {
 async function initialize(order, callbackUrl) {
   const data = await call('POST', '/transaction/initialize', {
     email: order.customer.email,
-    amount: order.total * 100, // kobo
-    currency: 'NGN',
+    amount: Math.round(order.total * 100), // kobo or cents
+    currency: order.currency || 'NGN',
     reference: order.payRef,
     callback_url: callbackUrl,
     metadata: {
@@ -37,7 +37,8 @@ async function initialize(order, callbackUrl) {
 // Confirms with Paystack that the payment reference was paid in full.
 async function verify(order, payRef) {
   const data = await call('GET', `/transaction/verify/${encodeURIComponent(payRef)}`);
-  const ok = data.status === 'success' && data.currency === 'NGN' && data.amount >= order.total * 100;
+  const ok = data.status === 'success' && data.currency === (order.currency || 'NGN')
+    && data.amount >= Math.round(order.total * 100);
   return {
     paid: ok,
     status: data.status,
